@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capex Forecast Assistant (Lokales RAG & LLM)</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- PDF.js for extraction in browser -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  
+  <!-- html2pdf.js for exporting PDF report -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="bg-slate-900 text-white border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between shadow-md">
+    <div class="flex items-center space-x-3">
+      <div class="bg-blue-600 p-2 rounded-lg text-white">
+        <i class="fa-solid fa-chart-line text-xl"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-lg leading-tight">Capex Forecast Assistant</h1>
+        <p class="text-xs text-slate-400">Datenschutzkonforme lokale KI-Analyse & Prognose</p>
+      </div>
+    </div>
+    
+    <!-- Quick Status Badge -->
+    <div class="flex items-center space-x-2 bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 text-xs mt-2 sm:mt-0">
+      <span id="status-indicator" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+      <span id="status-text" class="text-slate-300">Prüfe Verbindung zu Ollama...</span>
+    </div>
+  </header>
+
+  <!-- Main Grid Layout -->
+  <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 max-w-[1800px] w-full mx-auto">
+    
+    <!-- Left Sidebar: Configuration & Document Management (4 Cols) -->
+    <div class="lg:col-span-4 flex flex-col space-y-6">
+      
+      <!-- 1. Server & Model Configuration -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-4 flex items-center">
+          <i class="fa-solid fa-sliders text-blue-600 mr-2"></i> Server & Modell Konfiguration
+        </h2>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">OLLAMA API Base URL</label>
+            <input type="text" id="api-url" value="http://localhost:11434" 
+                   class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+            <p class="text-[11px] text-slate-500 mt-1">Für Firmen-Server anpassen (z. B. <code>http://192.168.1.50:11434</code>)</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Modell Name</label>
+            <input type="text" id="model-name" value="qwen2.5-coder:7b" 
+                   class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+            <p class="text-[11px] text-slate-500 mt-1">z. B. <code>qwen2.5-coder:7b</code>, <code>qwen2.5:14b</code> oder <code>llama3.1:8b</code></p>
+          </div>
+
+          <button id="btn-check-conn" onclick="checkConnection()" 
+                  class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium py-2 px-4 rounded-lg border border-slate-300 transition flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-arrows-rotate"></i>
+            <span>Verbindung testen & Modell prüfen</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. PDF Document Ingestion (RAG Basis) -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex-1 flex flex-col">
+        <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-4 flex items-center">
+          <i class="fa-solid fa-file-pdf text-red-500 mr-2"></i> Capex-Quelldokumente (PDF/Text)
+        </h2>
+
+        <!-- Dropzone -->
+        <div id="dropzone" class="border-2 border-dashed border-slate-300 rounded-lg p-5 text-center hover:border-blue-500 hover:bg-blue-50/50 transition cursor-pointer mb-4">
+          <input type="file" id="file-input" multiple accept=".pdf,.txt,.csv" class="hidden" onchange="handleFileSelect(event)">
+          <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-400 mb-2"></i>
+          <p class="text-xs text-slate-600 font-medium">Historische Berichte / Dokumente hochladen</p>
+          <p class="text-[11px] text-slate-400 mt-1">PDFs, CSV oder TXT per Klick oder Drag & Drop</p>
+        </div>
+
+        <!-- Document List -->
+        <div class="flex-1 overflow-y-auto min-h-[150px] max-h-[250px] space-y-2 pr-1" id="file-list">
+          <p class="text-xs text-slate-400 italic text-center py-4">Noch keine Dokumente geladen</p>
+        </div>
+
+        <!-- Extraction Stats -->
+        <div class="mt-4 pt-3 border-t border-slate-100 flex justify-between text-xs text-slate-500">
+          <span>Extrahierter Kontext:</span>
+          <span id="token-counter" class="font-semibold text-slate-700">0 Zeichen</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Area: Interactive Chat & Actions (8 Cols) -->
+    <div class="lg:col-span-8 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-[calc(100vh-140px)]">
+      
+      <!-- Chat Header -->
+      <div class="bg-slate-50 border-b border-slate-200 px-6 py-3 flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-comments text-blue-600"></i>
+          <span class="text-sm font-semibold text-slate-700">Interaktive Capex-Erfassung</span>
+        </div>
+        <div class="flex space-x-2">
+          <button onclick="clearChat()" class="text-xs text-slate-500 hover:text-red-600 px-2 py-1 rounded transition">
+            <i class="fa-solid fa-trash mr-1"></i> Chat zurücksetzen
+          </button>
+          <button onclick="triggerForecastGeneration()" 
+                  class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+            <i class="fa-solid fa-file-export"></i>
+            <span>Capex Forecast PDF erstellen</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages History Container -->
+      <div id="chat-box" class="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/50">
+        <!-- Initial Bot Welcome Message -->
+        <div class="flex items-start space-x-3">
+          <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+            KI
+          </div>
+          <div class="bg-white border border-slate-200 text-slate-700 p-4 rounded-2xl rounded-tl-none text-sm max-w-[85%] shadow-sm">
+            <p class="font-semibold mb-1 text-slate-900">Willkommen zum lokalen Capex Forecast Assistenten!</p>
+            <p>Lade bitte oben links deine historischen Berichte, Investitionslisten oder Projekt-PDFs hoch. Wir können dann gemeinsam die aktuellen Rahmenbedingungen, ungeplante Instandhaltungen oder geplante strategische Investitionen besprechen.</p>
+            <p class="mt-2 text-xs text-slate-500">Sobald alle Informationen erfasst sind, sage mir einfach im Chat bescheid oder klicke oben rechts auf <strong>"Capex Forecast PDF erstellen"</strong>.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Box Area -->
+      <div class="p-4 border-t border-slate-200 bg-white">
+        <div class="flex space-x-2">
+          <textarea id="user-input" rows="2" 
+                    placeholder="Ergänze Annahmen für den Forecast (z.B. 'Zusätzliche 250k€ Capex für Cloud-Migration in Q3 eingeplant')..."
+                    class="flex-1 text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
+                    onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"></textarea>
+          <button id="btn-send" onclick="sendMessage()" 
+                  class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 rounded-lg shadow-sm transition flex items-center justify-center">
+            <i class="fa-solid fa-paper-plane text-base"></i>
+          </button>
+        </div>
+        <p class="text-[11px] text-slate-400 mt-2 flex items-center justify-between">
+          <span><i class="fa-solid fa-shield-halved text-emerald-600 mr-1"></i> 100% Datenschutz: Alle Dokumente & Prompts verbleiben komplett lokal.</span>
+          <span>Shift + Enter für Zeilenumbruch</span>
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Hidden Container for PDF Rendering -->
+  <div class="hidden">
+    <div id="pdf-template" class="p-8 bg-white text-slate-900 font-sans">
+      <div class="border-b-2 border-slate-900 pb-4 mb-6 flex justify-between items-end">
+        <div>
+          <h1 class="text-2xl font-bold uppercase tracking-wide text-slate-900">Capex Forecast Bericht</h1>
+          <p class="text-sm text-slate-500">Investitionsplanung & Strategische Vorschau</p>
+        </div>
+        <div class="text-right text-xs text-slate-500">
+          <p>Erstellt am: <span id="pdf-date"></span></p>
+          <p>Modell: <span id="pdf-model"></span></p>
+        </div>
+      </div>
+
+      <!-- Report Content injected dynamically -->
+      <div id="pdf-body" class="prose max-w-none text-sm space-y-4">
+        <!-- AI generated report content will be placed here -->
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-12 pt-4 border-t border-slate-200 text-xs text-slate-400 flex justify-between">
+        <span>Vertraulich - Nur für den internen Gebrauch</span>
+        <span>Erstellt mit Lokaler KI (Qwen)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Logic -->
+  <script>
+    // Initialize PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // State Variables
+    let uploadedFiles = []; // { name, text, pages }
+    let chatHistory = [];   // { role: 'user'|'assistant', content: string }
+    let aggregatedDocumentText = "";
+
+    // DOM Elements
+    const apiUrlInput = document.getElementById('api-url');
+    const modelNameInput = document.getElementById('model-name');
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('user-input');
+    const statusIndicator = document.getElementById('status-indicator');
+    const statusText = document.getElementById('status-text');
+
+    // Startup Checks
+    window.addEventListener('DOMContentLoaded', () => {
+      checkConnection();
+      setupDragAndDrop();
+    });
+
+    // 1. Connection & Health Check to Local Ollama
+    async function checkConnection() {
+      const baseUrl = apiUrlInput.value.replace(/\/$/, "");
+      statusIndicator.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
+      statusText.textContent = "Verbindung wird hergestellt...";
+
+      try {
+        const response = await fetch(`${baseUrl}/api/tags`);
+        if (response.ok) {
+          const data = await response.json();
+          const models = data.models || [];
+          const currentModel = modelNameInput.value.trim();
+          const exists = models.some(m => m.name === currentModel || m.name.startsWith(currentModel));
+
+          statusIndicator.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+          statusText.textContent = `Verbunden mit Ollama (${models.length} Modelle verfügbar)`;
+          if (!exists && models.length > 0) {
+            statusText.textContent = `Verbunden! Modell '${currentModel}' eventuell noch laden.`;
+          }
+        } else {
+          throw new Error("Fehler beim Abrufen der Modelle");
+        }
+      } catch (err) {
+        statusIndicator.className = "w-2.5 h-2.5 rounded-full bg-red-500";
+        statusText.textContent = "Keine Verbindung zu Ollama (CORS oder API Offline)";
+      }
+    }
+
+    // 2. Drag & Drop and PDF Extraction
+    function setupDragAndDrop() {
+      const dropzone = document.getElementById('dropzone');
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, preventDefaults, false);
+      });
+
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      dropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        handleFiles(files);
+      });
+
+      dropzone.addEventListener('click', () => {
+        document.getElementById('file-input').click();
+      });
+    }
+
+    function handleFileSelect(event) {
+      handleFiles(event.target.files);
+    }
+
+    async function handleFiles(files) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.type === "application/pdf") {
+          await extractTextFromPDF(file);
+        } else {
+          await extractTextFromPlainText(file);
+        }
+      }
+      updateFileListUI();
+    }
+
+    async function extractTextFromPDF(file) {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = "";
+
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items.map(item => item.str).join(" ");
+          fullText += `--- Seite ${pageNum} (${file.name}) ---\n${pageText}\n\n`;
+        }
+
+        uploadedFiles.push({
+          name: file.name,
+          pages: pdf.numPages,
+          text: fullText
+        });
+      } catch (error) {
+        alert(`Fehler beim Einlesen von PDF "${file.name}": ` + error.message);
+      }
+    }
+
+    function extractTextFromPlainText(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          uploadedFiles.push({
+            name: file.name,
+            pages: 1,
+            text: e.target.result
+          });
+          resolve();
+        };
+        reader.readAsText(file);
+      });
+    }
+
+    function updateFileListUI() {
+      const listContainer = document.getElementById('file-list');
+      const tokenCounter = document.getElementById('token-counter');
+
+      if (uploadedFiles.length === 0) {
+        listContainer.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-4">Noch keine Dokumente geladen</p>`;
+        tokenCounter.textContent = "0 Zeichen";
+        aggregatedDocumentText = "";
+        return;
+      }
+
+      listContainer.innerHTML = "";
+      aggregatedDocumentText = "";
+
+      uploadedFiles.forEach((file, index) => {
+        aggregatedDocumentText += `[DOKUMENT: ${file.name}]\n${file.text}\n\n`;
+
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs";
+        item.innerHTML = `
+          <div class="flex items-center space-x-2 truncate">
+            <i class="fa-solid fa-file-pdf text-red-500 text-sm"></i>
+            <span class="font-medium text-slate-700 truncate" title="${file.name}">${file.name}</span>
+            <span class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">${file.pages} S.</span>
+          </div>
+          <button onclick="removeFile(${index})" class="text-slate-400 hover:text-red-500 transition px-1">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        `;
+        listContainer.appendChild(item);
+      });
+
+      tokenCounter.textContent = `${aggregatedDocumentText.length.toLocaleString('de-DE')} Zeichen`;
+    }
+
+    function removeFile(index) {
+      uploadedFiles.splice(index, 1);
+      updateFileListUI();
+    }
+
+    // 3. Interactive Chat with Qwen via Ollama
+    async function sendMessage() {
+      const text = userInput.value.trim();
+      if (!text) return;
+
+      // Add user message to UI & history
+      appendMessage('user', text);
+      chatHistory.push({ role: 'user', content: text });
+      userInput.value = '';
+
+      // Check for forecast completion command in user prompt
+      const isGenerateRequested = text.toLowerCase().includes("forecast erstellen") || 
+                                  text.toLowerCase().includes("bericht generieren") ||
+                                  text.toLowerCase().includes("abgeschlossen") ||
+                                  text.toLowerCase().includes("alle informationen liegen vor");
+
+      // Show Bot loading indicator
+      const loadingDiv = appendLoadingMessage();
+
+      try {
+        const assistantResponse = await callOllamaChat();
+        loadingDiv.remove();
+
+        appendMessage('assistant', assistantResponse);
+        chatHistory.push({ role: 'assistant', content: assistantResponse });
+
+        // If user requested PDF generation or AI signaled completion
+        if (isGenerateRequested) {
+          triggerForecastGeneration();
+        }
+      } catch (err) {
+        loadingDiv.remove();
+        appendMessage('assistant', `⚠️ Fehler bei der Kommunikation mit dem Modell: ${err.message}. Stelle sicher, dass Ollama läuft und CORS-Anfragen erlaubt sind.`);
+      }
+    }
+
+    async function callOllamaChat() {
+      const baseUrl = apiUrlInput.value.replace(/\/$/, "");
+      const model = modelNameInput.value.trim();
+
+      // System Prompt injecting uploaded document RAG context
+      const systemPrompt = `Du bist ein hochqualifizierter Finanz- und Capex-Analyst in unserem Unternehmen.
+Dein Ziel ist es, in einem interaktiven Dialog die notwendigen Informationen für einen präzisen Capex-Forecast (Capital Expenditures) zu erfassen.
+
+Hier sind die aktuell hochgeladenen Dokumente/Berichte als Kontext:
+==================================================
+${aggregatedDocumentText || "Bisher wurden keine historischen Dokumente hochgeladen."}
+==================================================
+
+Regeln für deine Antwort:
+1. Nutze die Fakten und Zahlen aus den hochgeladenen Dokumenten präzise.
+2. Wenn der Nutzer neue Annahmen nennt (z.B. neue IT-Projekte, Anpassung der Budgetgrenzen), integriere diese logisch.
+3. Antworte professionell, auf den Punkt und auf Deutsch.`;
+
+      const messages = [
+        { role: 'system', content: systemPrompt },
+        ...chatHistory
+      ];
+
+      const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: model,
+          messages: messages,
+          temperature: 0.2
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Fehler (${response.status})`);
+      }
+
+      const data = await response.json();
+      return data.choices[0].message.content;
+    }
+
+    function appendMessage(role, content) {
+      const div = document.createElement('div');
+      div.className = "flex items-start space-x-3";
+
+      const isUser = role === 'user';
+      const avatar = isUser ? 'DU' : 'KI';
+      const bgClass = isUser ? 'bg-blue-600 text-white rounded-tr-none ml-auto' : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none';
+      const avatarBg = isUser ? 'bg-slate-700' : 'bg-blue-600';
+
+      div.innerHTML = `
+        ${!isUser ? `<div class="w-8 h-8 rounded-full ${avatarBg} text-white flex items-center justify-center text-xs font-bold shrink-0">${avatar}</div>` : ''}
+        <div class="${bgClass} p-4 rounded-2xl text-sm max-w-[85%] shadow-sm whitespace-pre-wrap">${escapeHtml(content)}</div>
+        ${isUser ? `<div class="w-8 h-8 rounded-full ${avatarBg} text-white flex items-center justify-center text-xs font-bold shrink-0">${avatar}</div>` : ''}
+      `;
+
+      if (isUser) {
+        div.classList.add('justify-end');
+      }
+
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function appendLoadingMessage() {
+      const div = document.createElement('div');
+      div.className = "flex items-start space-x-3";
+      div.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shrink-0">KI</div>
+        <div class="bg-white border border-slate-200 p-4 rounded-2xl rounded-tl-none text-sm shadow-sm flex items-center space-x-2">
+          <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+          <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+          <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+          <span class="text-xs text-slate-400 ml-2">Qwen verarbeitet Eingaben...</span>
+        </div>
+      `;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      return div;
+    }
+
+    function clearChat() {
+      chatHistory = [];
+      chatBox.innerHTML = '';
+      appendMessage('assistant', 'Der Chatverlauf wurde zurückgesetzt. Wie möchten wir die Capex-Planung fortführen?');
+    }
+
+    // 4. PDF Forecast Generation
+    async function triggerForecastGeneration() {
+      appendMessage('assistant', '📋 Erstelle den finalen Capex Forecast Bericht... Bitte einen Moment Geduld.');
+      const loadingDiv = appendLoadingMessage();
+
+      try {
+        const baseUrl = apiUrlInput.value.replace(/\/$/, "");
+        const model = modelNameInput.value.trim();
+
+        const summaryPrompt = `Du bist ein Senior Financial Controller. Erstelle einen strukturierten, förmlichen Capex Forecast Bericht auf Basis der bisherigen Quelldokumente und der im Chat besprochenen Zusatzinformationen.
+
+Formatiere den Bericht in sauberem HTML (nutze <h3>, <p>, <ul>, <li>, <table>, <th>, <td> mit einfachen Inline-Styles oder Standard-HTML), damit er direkt ausgedruckt werden kann.
+
+Der Bericht MUSS folgende Abschnitte enthalten:
+1. Executive Summary (Zusammenfassung der Investitionsziele)
+2. Historische Basis & Ist-Analyse
+3. Neue Capex-Annahmen & Schlüsselprojekte (aus dem Chat)
+4. Zusammenfassende Tabelle der Capex-Kategorien mit geschätzten Beträgen (€)
+5. Risikobewertung & Handlungsempfehlungen
+
+Erstelle NUR den Inhalt für den Berichtskörper ohne <html> oder <body> Tags.`;
+
+        const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              ...chatHistory,
+              { role: 'user', content: summaryPrompt }
+            ],
+            temperature: 0.1
+          })
+        });
+
+        const data = await response.json();
+        const htmlReportContent = data.choices[0].message.content;
+        loadingDiv.remove();
+
+        // Render Report to hidden PDF container and download
+        exportToPdf(htmlReportContent);
+
+      } catch (err) {
+        loadingDiv.remove();
+        alert("Fehler bei der PDF-Generierung: " + err.message);
+      }
+    }
+
+    function exportToPdf(htmlContent) {
+      document.getElementById('pdf-date').textContent = new Date().toLocaleDateString('de-DE');
+      document.getElementById('pdf-model').textContent = modelNameInput.value.trim();
+      
+      // Clean HTML string if wrap codeblocks returned
+      const cleanHtml = htmlContent.replace(/```html/g, '').replace(/```/g, '');
+      document.getElementById('pdf-body').innerHTML = cleanHtml;
+
+      const element = document.getElementById('pdf-template');
+      
+      const opt = {
+        margin:       [15, 15, 15, 15],
+        filename:     `Capex_Forecast_Report_${new Date().toISOString().slice(0,10)}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save().then(() => {
+        appendMessage('assistant', '✅ Der Capex Forecast Bericht wurde erfolgreich generiert und als PDF heruntergeladen!');
+      });
+    }
+
+    // Helper Utility
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>

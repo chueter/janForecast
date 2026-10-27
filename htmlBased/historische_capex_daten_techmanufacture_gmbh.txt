@@ -1,0 +1,81 @@
+================================================================================
+FINANZBERICHT & CAPEX-HISTORIE (2023 - 2025)
+TechManufacture GmbH – Investitionscontrolling & Anlagenspiegel
+================================================================================
+
+1. UNTERNEHMENSÜBERSICHT
+--------------------------------------------------------------------------------
+Die TechManufacture GmbH ist ein mittelständischer Hersteller von Präzisionskomponenten 
+für die Industrieautomation. Dieser Bericht fasst die aktivierten Investitionsausgaben 
+(Capital Expenditures / Capex) der letzten drei Jahre zusammen.
+
+2. INVESTITIONSHISTORIE NACH KATEGORIEN (IN EUR)
+--------------------------------------------------------------------------------
+
+A) IT-INFRASTRUKTUR & DIGITALISIERUNG
+   - 2023:
+     * Erneuerung der Core-Serverinfrastruktur & SAN-Storage: 185.000 €
+     * Rollout von ERP-Modulen (SAP-Erweiterung Fertigung): 140.000 €
+     * Summe IT 2023: 325.000 €
+   - 2024:
+     * Anbindung IoT-Sensorik an Produktionsmaschinen: 95.000 €
+     * Hardware-Refresh Arbeitsplätze & Laptops (Hybrid Work): 65.000 €
+     * Summe IT 2024: 160.000 €
+   - 2025:
+     * Upgrade Netzwerk-Infrastruktur & OT-Cybersecurity: 110.000 €
+     * Einführung KI-gestützte Qualitätskontrolle (Pilot): 75.000 €
+     * Summe IT 2025: 185.000 €
+
+B) MASCHINENPARK & FERTIGUNGSTECHNIK
+   - 2023:
+     * Anschaffung 5-Achs-CNC-Bearbeitungszentrum (Heller): 680.000 €
+     * Automatisiertes Teilelager (Kardex Shuttle): 220.000 €
+     * Summe Maschinen 2023: 900.000 €
+   - 2024:
+     * Beschaffung Laser-Schneidanalage (Trumpf): 540.000 €
+     * Robotergestützte Beladestation (Bestandskonvertierung): 180.000 €
+     * Summe Maschinen 2024: 720.000 €
+   - 2025:
+     * Modernisierung Bestands-Spindeln & Generalüberholung Zerspanung: 210.000 €
+     * Ersatzbeschaffung Spritzgussform-Werkzeuge: 145.000 €
+     * Summe Maschinen 2025: 355.000 €
+
+C) GEBÄUDE, INFRASTRUKTUR & ENERGIEEFFIZIENZ
+   - 2023:
+     * Dachsanierung Halle 2 inkl. Isolierung: 240.000 €
+     * Umstellung Werksbeleuchtung auf LED-Technik: 55.000 €
+     * Summe Gebäude 2023: 295.000 €
+   - 2024:
+     * Installation Photovoltaik-Anlage (450 kWp Halle 1 & 2): 380.000 €
+     * Wärmepumpen-Umstellung Werkstattbereich: 195.000 €
+     * Summe Gebäude 2024: 575.000 €
+   - 2025:
+     * E-Ladeinfrastruktur Fuhrpark & Trafo-Aufstockung: 130.000 €
+     * Belüftungs- und Klimaanlage Messraum: 85.000 €
+     * Summe Gebäude 2025: 215.000 €
+
+D) FORSCHUNG & ENTWICKLUNG (F&E EQUIPMENT)
+   - 2023:
+     * Anschaffung 3D-Koordinatenmessgerät (Zeiss): 190.000 €
+     * Summe F&E 2023: 190.000 €
+   - 2024:
+     * Prototypen-3D-Drucker für Metallkomponenten: 230.000 €
+     * Summe F&E 2024: 230.000 €
+   - 2025:
+     * Prüfstand für Komponenten-Dauertests: 160.000 €
+     * Summe F&E 2025: 160.000 €
+
+--------------------------------------------------------------------------------
+3. GESAMTÜBERSICHT CAPEX (2023 - 2025)
+--------------------------------------------------------------------------------
+- Gesamt Capex 2023: 1.710.000 € (Schwerpunkt: Maschinenpark & Hallensanierung)
+- Gesamt Capex 2024: 1.685.000 € (Schwerpunkt: Energieeffizienz & PV-Anlage)
+- Gesamt Capex 2025:   915.000 € (Konsolidierungsjahr / Reduzierte Ausgaben)
+
+4. WICHTIGE ANMERKUNGEN FÜR DEUTSCHE PLANNING-PERIODES (2026+)
+--------------------------------------------------------------------------------
+- Der Maschinenpark weist für 2026 einen Nachholbedarf auf, da 2025 Hauptinvestitionen 
+  ausgesetzt wurden.
+- Hallenerweiterung Halle 3 steht strategisch im Raum (geschätztes Volumen: ca. 1,2 Mio. €).
+- Geplante IT-Aufwände für 2026 umfassen den vollen Rollout der KI-Qualitätskontrolle.
+================================================================================

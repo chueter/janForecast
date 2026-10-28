@@ -2,17 +2,20 @@ import os
 import time
 import pandas as pd
 import chromadb
-from llama_index.experimental.query_engine import PandasQueryEngine
+
 from llama_index.llms.ollama import Ollama
 from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.core import VectorStoreIndex, Document, StorageContext
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
+# Initialisiere dein lokales Qwen-Modell direkt über LlamaIndex
+llm = Ollama(model="qwen2.5-coder:7b", request_timeout=60.0)
+
 def main():
     print("==================================================")
     print(" Starte Erweiterten CapEx & RAG Test-Service")
-    print("==================================================
-")
+    print("==================================================")
+
     
     ollama_host = os.getenv("OLLAMA_HOST", "http://ollama:11434")
     print(f"Verbinde mit Ollama unter: {ollama_host}")
@@ -27,8 +30,7 @@ def main():
     # ---------------------------------------------------------
     # TEIL 1: Structured Data Analysis via PandasQueryEngine
     # ---------------------------------------------------------
-    print("
---- TEIL 1: PandasQueryEngine (Strukturierte CapEx-Analyse) ---")
+    print("TEIL 1: PandasQueryEngine (Strukturierte CapEx-Analyse)")
     
     df = pd.DataFrame({
         "Projekt": ["Server-Upgrade", "CNC-Maschine", "Büromöbel", "Lager-Erweiterung"],
@@ -44,23 +46,19 @@ def main():
     try:
         query_engine = PandasQueryEngine(df=df, llm=llm, verbose=True)
         query_text = "Wie hoch ist der Gesamte CapEx für 2025 in der Kategorie Produktion?"
-        print(f"
-Frage an PandasQueryEngine: '{query_text}'")
+        print(f"Frage an PandasQueryEngine: '{query_text}'")
         
         response = query_engine.query(query_text)
-        print("
-Antwort der PandasQueryEngine:")
+        print("Antwort der PandasQueryEngine:")
         print(response)
     except Exception as e:
-        print(f"
-Hinweis: Konnte PandasQueryEngine nicht ausführen. Ist '{model_name}' geladen? Details: {e}")
+        print(f"Hinweis: Konnte PandasQueryEngine nicht ausführen. Ist '{model_name}' geladen? Details: {e}")
         print("Tipp: Führe aus: docker exec -it ollama_service ollama run qwen2.5-coder:7b")
 
     # ---------------------------------------------------------
     # TEIL 2: Unstructured Text Retrieval via ChromaDB RAG
     # ---------------------------------------------------------
-    print("
---- TEIL 2: ChromaDB + Ollama Embeddings (Freitext / Freigaben) ---")
+    print("TEIL 2: ChromaDB + Ollama Embeddings (Freitext / Freigaben)")
     
     sample_docs = [
         Document(text="Freigabenote IT-Infrastruktur 2025: Das Server-Upgrade wurde aufgrund steigender Cloud-Kosten priorisiert."),
@@ -88,17 +86,14 @@ Hinweis: Konnte PandasQueryEngine nicht ausführen. Ist '{model_name}' geladen? 
         print(f"Frage an RAG: '{rag_query}'")
         
         rag_response = rag_engine.query(rag_query)
-        print("
-Antwort des RAG-Systems:")
+        print("Antwort des RAG-Systems:")
         print(rag_response)
         
     except Exception as e:
-        print(f"
-Hinweis: Konnte RAG/ChromaDB Test nicht ausführen. Ist '{embed_model_name}' geladen? Details: {e}")
+        print(f"Hinweis: Konnte RAG/ChromaDB Test nicht ausführen. Ist '{embed_model_name}' geladen? Details: {e}")
         print("Tipp: Führe aus: docker exec -it ollama_service ollama pull nomic-embed-text")
 
-    print("
-==================================================")
+    print("==================================================")
     print(" Test-Durchlauf abgeschlossen.")
     print("==================================================")
 

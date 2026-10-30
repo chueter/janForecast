@@ -38,8 +38,11 @@ services:
     volumes:
       - ./data:/app/data
       - ./src:/app/src
+      - ./tests:/app/tests
     environment:
       - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=qwen2.5-coder:7b
+      - OLLAMA_NUM_CTX=8192
     command: python /app/src/app.py
     depends_on:
       - ollama

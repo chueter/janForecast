@@ -8,8 +8,17 @@ from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.core import VectorStoreIndex, Document, StorageContext
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
-# Initialisiere dein lokales Qwen-Modell direkt über LlamaIndex
-llm = Ollama(model="qwen2.5-coder:7b", request_timeout=60.0)
+# Liest die Variablen direkt aus der Docker-Umgebung (Standardbibliothek, keine neue Abhängigkeit!)
+model_name = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
+num_ctx = int(os.getenv("OLLAMA_NUM_CTX", 8192))
+
+# Initialisiere das Ollama-Modell mit dynamischem Kontextfenster
+llm = Ollama(
+    model=model_name, 
+    base_url=os.getenv("OLLAMA_HOST", "http://ollama:11434"),
+    request_timeout=60.0,
+    additional_kwargs={"options": {"num_ctx": num_ctx}}
+)
 
 def main():
     print("==================================================")

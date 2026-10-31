@@ -1,1 +1,3 @@
 mistralai
+pytest
+fpdf2

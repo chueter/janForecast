@@ -8,22 +8,29 @@ Diese Anleitung beschreibt den Prototyp im Verzeichnis `dockercomposetest/`: sei
 
 Es gibt zwei Browser-Oberflächen. Die CapEx-GUI auf Port 8501 führt eine Analyse mit hochgeladenen CSV- und PDF-Dateien aus. Open WebUI auf Port 3000 ist eine separate allgemeine Chat-Oberfläche für Ollama. Beide sprechen den Ollama-Dienst im internen Compose-Netzwerk an. Der Browser greift **nicht direkt** auf Ollamas Port 11434 zu.
 
-```mermaid
-flowchart LR
-    Browser[Browser]
-    subgraph Compose-Netzwerk
-        Capex[capex-app\nFastAPI und HTML\nPort 8501]
-        WebUI[open-webui\nallgemeiner Chat\nPort 3000]
-        Ollama[ollama\nLLM und Embeddings\nPort 11434 intern]
-        Models[ollama-models\nEinmaliger Modell-Download]
-        Chroma[Chroma EphemeralClient\nim capex-app-Prozess]
-    end
-    Browser -->|CapEx-GUI| Capex
-    Browser -->|Open WebUI| WebUI
-    Capex --> Ollama
-    Capex --> Chroma
-    WebUI --> Ollama
-    Models -->|pull| Ollama
+```text
+                         Docker-Host / Browser
+                  +----------------+  +----------------+
+                  | CapEx-GUI      |  | Open WebUI     |
+                  | localhost:8501 |  | localhost:3000 |
+                  +-------+--------+  +--------+-------+
+                          |                    |
++-------------------------|--------------------|----------------------+
+| Docker Compose network  |                    |                      |
+|                         v                    v                      |
+|  +----------------------+---+       +--------+---------+            |
+|  | capex-app (FastAPI)       |------>| ollama           |            |
+|  | HTML, CSV/PDF, API        |       | LLM + embeddings |            |
+|  | Chroma EphemeralClient    |       | port 11434       |            |
+|  +--------------------------+        +--------+---------+            |
+|                                                  ^                   |
+|  +--------------------------+                    |                  |
+|  | ollama-models            |--------------------+                  |
+|  | one-shot model download  |        ollama pull                    |
+|  +--------------------------+                                       |
++----------------------------------------------------------------------+
+
+Chroma laeuft innerhalb von capex-app, nicht als eigener Container.
 ```
 
 ### Dienste und Images
@@ -39,35 +46,30 @@ Die Image-Namen `latest` und `main` sind veränderlich. Dadurch kann ein Neubau 
 
 ### Was passiert bei einer CapEx-Anfrage?
 
-```mermaid
-sequenceDiagram
-    participant B as Browser
-    participant A as capex-app / FastAPI
-    participant O as Ollama
-    participant E as nomic-embed-text
-    participant C as Chroma (im App-Prozess)
-    participant Q as Qwen
-    B->>A: Dateien + Frage + Chatverlauf
-    A->>A: Größen-/Formatprüfung, temporäre Upload-Dateien
-    alt CSV ohne PDF, eindeutige Summenfrage
-        A->>A: Summe direkt aus Pandas berechnen
-    else CSV-Frage, die nicht eindeutig numerisch ist
-        A->>O: Prompt mit CSV-Text und Verlauf
-        O->>Q: Inferenz
-        Q-->>A: Antwort
-    else Mindestens ein PDF
-        A->>E: PDF-Chunks in Vektoren umwandeln
-        E-->>A: Embeddings
-        A->>C: Chunks, Metadaten, IDs und Vektoren schreiben
-        A->>C: Passende Chunks zur Frage abrufen
-        C-->>A: Gefundener Textkontext
-        A->>O: Frage/Verlauf + gefundene Chunks
-        O->>Q: Inferenz
-        Q-->>A: Antwort
-        A->>C: Temporäre Collection löschen
-    end
-    A->>A: Temporäre Dateien löschen
-    A-->>B: Analyseergebnis
+```text
+Browser              capex-app              Ollama / Qwen       Chroma
+  |                     |                         |                 |
+  | Dateien + Frage     |                         |                 |
+  |-------------------->|                         |                 |
+  |                     |                         |                 |
+  |                     | CSV-only, klare Summe:  |                 |
+  |                     | Pandas berechnet direkt |                 |
+  |                     |                         |                 |
+  |                     | CSV-only, freie Frage:  |                 |
+  |                     | Prompt mit CSV + Verlauf|                 |
+  |                     |------------------------>|                 |
+  |                     |<------------------------| Antwort         |
+  |                     |                         |                 |
+  |                     | PDF: nomic erzeugt      |                 |
+  |                     | Embeddings              |                 |
+  |                     |------------------------- Chunks + Vektoren>
+  |                     |<------------------------- Treffer         |
+  |                     | Frage + Treffer         |                 |
+  |                     |------------------------>|                 |
+  |                     |<------------------------| Antwort         |
+  |                     | Collection loeschen     |                 |
+  |<--------------------|                         |                 |
+  | Antwort             | temporaere Dateien weg  |                 |
 ```
 
 Die API lässt nur eine Forecast-Verarbeitung gleichzeitig laufen. Uploads sind auf zehn Dateien, 20 MB je Datei und 50 MB Gesamtgröße begrenzt. Der Browser sendet bei jeder Folgefrage die ausgewählten Dateien erneut und hält den Chatverlauf lokal im Tab; dadurch werden PDFs pro Folgefrage erneut gelesen und indexiert.

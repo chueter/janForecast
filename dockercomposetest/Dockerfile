@@ -13,9 +13,9 @@ RUN pip install --no-cache-dir -r requirements-base.txt
 # 2. Test- und Web-Requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir python-multipart
 
-# 3. Code kopieren
 COPY . .
 
-CMD ["python", "src/app.py"]
+EXPOSE 8501
+
+CMD ["uvicorn", "app:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8501"]

@@ -1,3 +1,2 @@
-mistralai
 pytest
 fpdf2

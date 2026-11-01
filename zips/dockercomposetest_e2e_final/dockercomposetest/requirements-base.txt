@@ -1,0 +1,12 @@
+pandas>=2.0.0
+polars>=0.20.0
+ollama>=0.3.0
+requests>=2.31.0
+llama-index-core
+llama-index-experimental
+llama-index-llms-ollama
+chromadb>=0.4.0
+llama-index-vector-stores-chroma
+llama-index-embeddings-ollama
+llama-index-readers-file
+pypdf

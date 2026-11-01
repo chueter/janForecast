@@ -1,0 +1,4 @@
+mistralai
+pytest
+fpdf2
+python-multipart

@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>CapEx Forecast</title>
+  <style>
+    :root {
+      font-family: "Segoe UI", "Aptos", sans-serif;
+      color: #202a31;
+      background: #f3f5f2;
+      font-synthesis: none;
+      --ink: #202a31;
+      --muted: #65716e;
+      --line: #dce3de;
+      --paper: #fff;
+      --green: #176b51;
+      --green-dark: #10513e;
+      --coral: #c76146;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem clamp(1rem, 4vw, 3.5rem);
+      background: var(--ink);
+      color: white;
+    }
+    .brand { display: flex; align-items: center; gap: .8rem; }
+    .brand-mark {
+      display: grid;
+      width: 2.4rem;
+      aspect-ratio: 1;
+      place-items: center;
+      border-radius: 6px;
+      background: #d1e6d9;
+      color: var(--green-dark);
+      font-weight: 800;
+    }
+    h1, h2, p { margin: 0; }
+    header h1 { font-size: 1rem; font-weight: 650; }
+    header p { margin-top: .2rem; color: #c1ccc8; font-size: .78rem; }
+    #connection {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      color: #d4dfda;
+      font-size: .8rem;
+    }
+    #connection::before {
+      width: .55rem;
+      height: .55rem;
+      border-radius: 50%;
+      background: #e2a249;
+      content: "";
+    }
+    #connection[data-state="ready"]::before { background: #68c59c; }
+    #connection[data-state="error"]::before { background: #f08469; }
+    main { width: min(1120px, calc(100% - 2rem)); margin: 3.5rem auto; }
+    .intro { margin-bottom: 1.6rem; }
+    .eyebrow {
+      margin-bottom: .65rem;
+      color: var(--coral);
+      font-size: .72rem;
+      font-weight: 750;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .intro h2 { font-size: clamp(1.7rem, 4vw, 2.4rem); line-height: 1.12; }
+    .intro > p:last-child { max-width: 650px; margin-top: .7rem; color: var(--muted); line-height: 1.55; }
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(280px, .75fr) minmax(0, 1.25fr);
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .input-panel, .result-panel { min-width: 0; padding: clamp(1.15rem, 3vw, 2rem); }
+    .input-panel { border-right: 1px solid var(--line); }
+    .section-label { margin-bottom: 1rem; font-size: .9rem; font-weight: 700; }
+    .upload {
+      display: grid;
+      min-height: 150px;
+      padding: 1.2rem;
+      place-content: center;
+      gap: .55rem;
+      border: 1px dashed #9eb4a8;
+      border-radius: 6px;
+      background: #f6faf7;
+      text-align: center;
+      cursor: pointer;
+    }
+    .upload:hover, .upload:focus-within { border-color: var(--green); background: #eff7f1; }
+    .upload strong { font-size: .9rem; }
+    .upload span { color: var(--muted); font-size: .76rem; }
+    input[type="file"] { max-width: 100%; color: var(--muted); font-size: .76rem; }
+    .file-list { display: grid; gap: .45rem; margin-top: .75rem; }
+    .file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .6rem;
+      padding: .55rem .65rem;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      font-size: .76rem;
+    }
+    .file-name { min-width: 0; overflow-wrap: anywhere; }
+    .file-remove { min-height: 1.8rem; padding: .2rem .45rem; color: var(--coral); background: transparent; }
+    #file-status { min-height: 1.1rem; margin-top: .45rem; color: var(--muted); font-size: .73rem; }
+    label[for="question"] { display: block; margin: 1.4rem 0 .45rem; font-size: .82rem; font-weight: 700; }
+    textarea {
+      display: block;
+      width: 100%;
+      min-height: 90px;
+      resize: vertical;
+      padding: .8rem;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--ink);
+      font: inherit;
+      font-size: .88rem;
+      line-height: 1.5;
+    }
+    textarea:focus, button:focus-visible, input:focus-visible { outline: 3px solid #8fc4ad; outline-offset: 2px; }
+    .actions { display: flex; align-items: center; gap: .7rem; margin-top: 1rem; }
+    button {
+      min-height: 2.65rem;
+      padding: .6rem 1rem;
+      border: 0;
+      border-radius: 5px;
+      font: inherit;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    #submit { background: var(--green); color: white; }
+    #submit:hover { background: var(--green-dark); }
+    #submit:disabled { opacity: .6; cursor: wait; }
+    #print { border: 1px solid var(--line); background: white; color: var(--ink); }
+    .hint { margin-top: .9rem; color: var(--muted); font-size: .73rem; line-height: 1.5; }
+    .result-panel { background: #fbfcfa; }
+    .result-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
+    .chat-log {
+      display: flex;
+      min-height: 380px;
+      height: min(58vh, 680px);
+      flex-direction: column;
+      gap: .8rem;
+      overflow-y: auto;
+      margin-top: 1rem;
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #f5f8f5;
+    }
+    .message {
+      max-width: 92%;
+      padding: .75rem .9rem;
+      border-radius: 7px;
+      color: #36413c;
+      font-size: .9rem;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .message.user { align-self: flex-end; background: #e4f0e8; }
+    .message.assistant { align-self: flex-start; border: 1px solid var(--line); background: white; }
+    .message.notice { align-self: center; color: var(--muted); font-size: .8rem; text-align: center; }
+    .message.pending { color: var(--green); }
+    .chat-actions { display: flex; justify-content: space-between; gap: .6rem; margin-top: .85rem; }
+    #clear-chat { border: 1px solid var(--line); background: white; color: var(--ink); }
+    #submit { margin-left: auto; }
+    #submit:disabled { opacity: .6; cursor: wait; }
+    .empty-state { margin: auto; color: #87918c; font-size: .85rem; text-align: center; }
+    @media (max-width: 680px) {
+      header { align-items: flex-start; flex-direction: column; }
+      main { margin-top: 2rem; }
+      .workspace { grid-template-columns: 1fr; }
+      .input-panel { border-right: 0; border-bottom: 1px solid var(--line); }
+      .chat-log { min-height: 260px; height: 45vh; }
+    }
+    @media print {
+      header, .intro, .input-panel, .chat-actions { display: none !important; }
+      main { width: 100%; margin: 0; }
+      .workspace { display: block; border: 0; }
+      .result-panel { padding: 0; background: white; }
+      .chat-log { height: auto; min-height: 0; overflow: visible; border: 0; background: white; }
+      .message { max-width: 100%; break-inside: avoid; color: black; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">C</div>
+      <div>
+        <h1>CapEx Forecast Assistant</h1>
+        <p>Lokale Analyse von Investitionsdaten</p>
+      </div>
+    </div>
+    <div id="connection" role="status" aria-live="polite">Verbindung wird geprüft</div>
+  </header>
+
+  <main>
+    <section class="intro" aria-labelledby="page-title">
+      <p class="eyebrow">Finanzplanung</p>
+      <h2 id="page-title">CapEx-Daten analysieren</h2>
+      <p>Mehrere CSV-Dateien und PDFs als gemeinsame Grundlage hinzufügen und im Gespräch Folgefragen stellen.</p>
+    </section>
+
+    <form id="forecast-form" class="workspace">
+      <section class="input-panel" aria-labelledby="input-title">
+        <h2 id="input-title" class="section-label">Quelldokumente</h2>
+        <label class="upload" for="file">
+          <strong>Dateien hinzufügen</strong>
+          <span>CSV oder PDF, bis zu 10 Dateien</span>
+          <input id="file" type="file" accept=".csv,.pdf" multiple>
+        </label>
+        <div id="file-list" class="file-list" aria-live="polite"></div>
+        <p id="file-status" role="status"></p>
+        <label for="question">Deine Frage</label>
+        <textarea id="question" name="query" maxlength="20000" required placeholder="Zum Beispiel: Wie verändert sich das Produktionsbudget gegenüber dem Vorjahr?"></textarea>
+        <div class="chat-actions">
+          <button id="clear-chat" type="button">Chat leeren</button>
+          <button id="submit" type="submit">Frage senden</button>
+        </div>
+        <p class="hint">Dateien werden bei jeder Frage erneut an die interne API übertragen und nur temporär verarbeitet. Antworten bitte vor Verwendung prüfen.</p>
+      </section>
+
+      <section class="result-panel" aria-labelledby="result-title">
+        <div class="result-heading">
+          <h2 id="result-title" class="section-label">Gespräch</h2>
+          <button id="print" type="button" title="Gespräch drucken oder als PDF speichern">Drucken / PDF</button>
+        </div>
+        <div id="chat-log" class="chat-log" role="log" aria-live="polite" aria-relevant="additions text">
+          <p class="empty-state">Füge Quelldokumente hinzu und stelle deine erste Frage.</p>
+        </div>
+      </section>
+    </form>
+  </main>
+
+  <script>
+    const form = document.getElementById('forecast-form');
+    const fileInput = document.getElementById('file');
+    const submitButton = document.getElementById('submit');
+    const chatLog = document.getElementById('chat-log');
+    const fileList = document.getElementById('file-list');
+    const fileStatus = document.getElementById('file-status');
+    const connection = document.getElementById('connection');
+    const selectedFiles = [];
+    const chatHistory = [];
+    const maxFiles = 10;
+    const maxFileBytes = 20 * 1024 * 1024;
+    const maxTotalBytes = 50 * 1024 * 1024;
+
+    async function checkConnection() {
+      try {
+        const response = await fetch('/api/health');
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || 'Dienst nicht erreichbar');
+        connection.dataset.state = data.model_available ? 'ready' : 'error';
+        connection.textContent = data.model_available
+          ? `Verbunden · ${data.model}`
+          : `Modell fehlt · ${data.model}`;
+      } catch (error) {
+        connection.dataset.state = 'error';
+        connection.textContent = error.message || 'Ollama nicht erreichbar';
+      }
+    }
+
+    function appendMessage(role, content) {
+      const emptyState = chatLog.querySelector('.empty-state');
+      if (emptyState) emptyState.remove();
+      const message = document.createElement('div');
+      message.className = `message ${role}`;
+      message.textContent = content;
+      chatLog.appendChild(message);
+      chatLog.scrollTop = chatLog.scrollHeight;
+      return message;
+    }
+
+    function renderFiles() {
+      fileList.replaceChildren();
+      selectedFiles.forEach((file, index) => {
+        const row = document.createElement('div');
+        row.className = 'file-item';
+        const name = document.createElement('span');
+        name.className = 'file-name';
+        name.textContent = `${file.name} · ${(file.size / 1024 / 1024).toFixed(1)} MB`;
+        const remove = document.createElement('button');
+        remove.className = 'file-remove';
+        remove.type = 'button';
+        remove.title = `${file.name} entfernen`;
+        remove.setAttribute('aria-label', `${file.name} entfernen`);
+        remove.textContent = 'Entfernen';
+        remove.addEventListener('click', () => {
+          selectedFiles.splice(index, 1);
+          renderFiles();
+        });
+        row.append(name, remove);
+        fileList.appendChild(row);
+      });
+    }
+
+    fileInput.addEventListener('change', () => {
+      fileStatus.textContent = '';
+      for (const file of fileInput.files) {
+        const extension = file.name.split('.').pop().toLowerCase();
+        const duplicate = selectedFiles.some(existing =>
+          existing.name === file.name && existing.size === file.size && existing.lastModified === file.lastModified
+        );
+        if (!['csv', 'pdf'].includes(extension)) {
+          fileStatus.textContent = `${file.name}: Nur CSV und PDF werden unterstützt.`;
+          continue;
+        }
+        if (duplicate) continue;
+        const totalBytes = selectedFiles.reduce((sum, selected) => sum + selected.size, 0);
+        if (file.size > maxFileBytes || totalBytes + file.size > maxTotalBytes) {
+          fileStatus.textContent = 'Pro Datei sind 20 MB und insgesamt 50 MB erlaubt.';
+          continue;
+        }
+        if (selectedFiles.length >= maxFiles) {
+          fileStatus.textContent = `Es sind höchstens ${maxFiles} Dateien erlaubt.`;
+          break;
+        }
+        selectedFiles.push(file);
+      }
+      fileInput.value = '';
+      renderFiles();
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!form.reportValidity()) return;
+      if (selectedFiles.length === 0) {
+        fileStatus.textContent = 'Bitte mindestens eine CSV- oder PDF-Datei hinzufügen.';
+        return;
+      }
+      if (chatHistory.length >= 20) {
+        appendMessage('notice', 'Der Chat hat sein Nachrichtenlimit erreicht. Bitte starte einen neuen Chat.');
+        return;
+      }
+
+      submitButton.disabled = true;
+      fileInput.disabled = true;
+      const queryInput = document.getElementById('question');
+      const query = queryInput.value.trim();
+      appendMessage('user', query);
+      const pendingMessage = appendMessage('pending', 'Analyse läuft. PDF-Dateien werden für diese Frage neu eingelesen.');
+
+      try {
+        const requestData = new FormData();
+        selectedFiles.forEach(file => requestData.append('files', file, file.name));
+        requestData.append('query', query);
+        requestData.append('history', JSON.stringify(chatHistory));
+        const response = await fetch('/api/forecast', {
+          method: 'POST',
+          body: requestData,
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || 'Die Anfrage ist fehlgeschlagen.');
+        pendingMessage.remove();
+        appendMessage('assistant', data.forecast_result);
+        chatHistory.push({ role: 'user', content: query });
+        chatHistory.push({ role: 'assistant', content: data.forecast_result });
+        queryInput.value = '';
+      } catch (error) {
+        pendingMessage.remove();
+        appendMessage('notice', `Fehler: ${error.message}`);
+      } finally {
+        submitButton.disabled = false;
+        fileInput.disabled = false;
+      }
+    });
+
+    document.getElementById('clear-chat').addEventListener('click', () => {
+      chatHistory.length = 0;
+      chatLog.replaceChildren();
+      appendMessage('notice', 'Chat geleert. Die ausgewählten Quelldateien bleiben erhalten.');
+    });
+    document.getElementById('print').addEventListener('click', () => window.print());
+    checkConnection();
+  </script>
+</body>
+</html>

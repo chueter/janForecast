@@ -2,6 +2,33 @@
 
 Diese Anleitung beschreibt den Prototyp im Verzeichnis `dockercomposetest/`: seine Container und Datenflüsse, den Umzug auf einen anderen Rechner mit Docker Compose und die wichtigsten Diagnose- und Neustartbefehle. Die Befehle sind für PowerShell formuliert und werden aus `dockercomposetest/` ausgeführt.
 
+## Schnellstart zum Ausprobieren
+
+Voraussetzung ist Docker Desktop mit Docker Compose v2. Diese Compose-Konfiguration ist für einen Rechner mit NVIDIA-GPU eingerichtet; die vollständigen Hardware- und Systemanforderungen stehen unter [Voraussetzungen am Zielrechner](#voraussetzungen-am-zielrechner).
+
+Öffne PowerShell im Projektordner `dockercomposetest/` und starte die Anwendung:
+
+```powershell
+docker compose up --build -d
+docker compose ps -a
+```
+
+Beim ersten Start lädt Docker die Container-Images sowie das konfigurierte Ollama-Modell und `nomic-embed-text` herunter. Das kann einige Zeit dauern. Den Modell-Download kannst du verfolgen mit:
+
+```powershell
+docker compose logs -f ollama-models
+```
+
+Sobald der Download abgeschlossen ist, öffne die CapEx-GUI unter <http://localhost:8501>. Die separate Ollama-Chat-Oberfläche erreichst du unter <http://localhost:3000>. Mit `Ctrl+C` beendest du nur die Loganzeige, nicht die Container.
+
+Zum Stoppen der Anwendung:
+
+```powershell
+docker compose down
+```
+
+Die heruntergeladenen Modelle bleiben dabei erhalten. `docker compose down -v` würde dagegen auch die gespeicherten Modelle und Open-WebUI-Daten löschen.
+
 ## 1. Architektur des Prototyps
 
 ### Überblick
